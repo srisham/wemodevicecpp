@@ -1,0 +1,45 @@
+curl -0 -v -X POST http://wemo:49153/upnp/control/basicevent1 -H 'SOAPACTION: "urn:Belkin:service:basicevent:1#GetBinaryState"' -H 'Content-Type: text/xml; charset=utf-8' -d @- << EOF
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope
+  xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
+  s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:GetBinaryState xmlns:u="urn:Belkin:service:basicevent:1" />
+  </s:Body>
+</s:Envelope>
+EOF
+
+
+SetBinaryState - OFF
+
+curl -0 -v -X POST http://wemo:49153/upnp/control/basicevent1 -H 'SOAPACTION: "urn:Belkin:service:basicevent:1#SetBinaryState"' -H 'Content-Type: text/xml; charset=utf-8' -d @- << EOF
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope
+  xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
+  s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:SetBinaryState xmlns:u="urn:Belkin:service:basicevent:1">
+      <BinaryState>0</BinaryState>
+    </u:SetBinaryState>
+  </s:Body>
+</s:Envelope>
+EOF
+
+
+SetBinaryState - ON
+
+curl -0 -v -X POST http://wemo:49153/upnp/control/basicevent1 -H 'SOAPACTION: "urn:Belkin:service:basicevent:1#SetBinaryState"' -H 'Content-Type: text/xml; charset=utf-8' -d @- << EOF
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope
+  xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
+  s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:SetBinaryState xmlns:u="urn:Belkin:service:basicevent:1">
+      <BinaryState>1</BinaryState>
+    </u:SetBinaryState>
+  </s:Body>
+</s:Envelope>
+EOF
+
+
+
