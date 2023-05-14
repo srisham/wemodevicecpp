@@ -1,109 +1,113 @@
 #include <iostream>
 #include <cstring>
+#include <sstream>
+#include <pugixml.hpp>
 #include "HttpRequest.h"
 
 
-int main(int argc, char** argv) {
+std::string createSoapRequest(const std::string& wMethod, const std::string& wServiceType, 
+    const std::string& wName = "", const std::string& wState = "") {
 
-    if(argc < 1) {
-        std::cout<< "Usage: ./wemo_connect [COMMAND on/off]"<<std::endl;
-        exit(1);
+    // Generate new XML document within memory
+    pugi::xml_document doc;
+
+    auto declarationNode = doc.append_child(pugi::node_declaration);
+    declarationNode.append_attribute("version")     = "1.0";
+    declarationNode.append_attribute("encoding")    = "utf-8";
+
+    auto root = doc.append_child("s:Envelope");
+    root.append_attribute("xmlns:s")     = "http://schemas.xmlsoap.org/soap/envelope/";
+    root.append_attribute("s:encodingStyle") = "http://schemas.xmlsoap.org/soap/encoding/";
+
+    auto body = root.append_child("s:Body");
+    auto setBinarystate = body.append_child((std::string("u:") + wMethod).c_str());
+    setBinarystate.append_attribute("xmlns:u") = wServiceType.c_str(); //"urn:Belkin:service:basicevent:1";
+        
+    pugi::xml_node state;
+    if (!wName.empty()) {
+        state = setBinarystate.append_child(wName.c_str());
+        state.append_child(pugi::node_pcdata).set_value(wState.c_str());
     }
-    char* state = argv[1];
 
-    std::cout<<"Command: "<<state<<std::endl<<std::endl;
+    std::stringstream ss;
+    doc.save(ss,"  ");
+    printf("Body: \n%s\n", ss.str().c_str());
 
-    std::string soap;
-    soap = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
-    soap += "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"";
-    soap += "s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">";
-    soap += "<s:Body>";
-    soap += "<u:SetBinaryState xmlns:u=\"urn:Belkin:service:basicevent:1\">";
-    soap += "<BinaryState>" + strcmp(state, "on") == 0 ? std::to_string(1) : std::to_string(0) + "</BinaryState></u:SetBinaryState>";
-    soap += "</s:Body></s:Envelope>";
+    return ss.str();
+}
 
-    std::string contentLength = "Content-Length: " + std::to_string(soap.length());
-
-    std::string url = "http://wemo:49153/upnp/control/basicevent1";
+std::string getBasicEvents(const std::string& wMethod) {
     
+    std::string wServiceType = "urn:Belkin:service:basicevent:1";
+    std::string soap = createSoapRequest(wMethod, wServiceType);
+    std::string url = "http://wemo:49153/upnp/control/basicevent1";    
+
     HttpRequest http;
     http.setUrl(url);
-    http.setHeaders("Content-type", "text/xml; charset=utf-8");
-    http.setHeaders("SOAPACTION", "\"urn:Belkin:service:basicevent:1#SetBinaryState\"");
-    http.setHeaders("Connection", "keep-alive");
-    http.setHeaders("Content-Length", soap);
+
+    http.setHeaders("SOAPACTION", "\"" + wServiceType + "#" + wMethod + "\"");
+    http.setHeaders("Content-Length", std::to_string(soap.length()));
+
+    http.setData(soap);
 
     std::string response = http.sendRequest();
+    printf("%s\n", response.c_str());
+    return response;
+}
 
+
+std::string setBinaryEvents(const std::string& wMethod, 
+    const std::string& wName, const std::string& wState) {
+    
+    std::string wServiceType = "urn:Belkin:service:basicevent:1";
+    std::string soap = createSoapRequest(wMethod, wServiceType, wName, wState);
+
+    std::string url = "http://wemo:49153/upnp/control/basicevent1";    
+    HttpRequest http;
+    http.setUrl(url);
+
+    http.setHeaders("SOAPACTION", "\"" + wServiceType + "#" + wMethod + "\"");
+    // http.setHeaders("SOAPACTION", "\"urn:Belkin:service:basicevent:1#SetBinaryState\"");
+    http.setHeaders("Content-Length", std::to_string(soap.length()));
+
+    http.setData(soap);
+
+    std::string response = http.sendRequest();
+    printf("%s\n", response.c_str());
+    return response;
+}
+
+int main(int argc, char** argv) {
+
+    printf("main +\n");
+    
+    char* state = argv[1];
+    std::cout<<"Command: "<<state<<std::endl<<std::endl;
+
+    getBasicEvents("GetFriendlyName");
+    getBasicEvents("GetMacAddr");
+    getBasicEvents("GetHomeId");
+    getBasicEvents("GetServerEnvironment");
+    getBasicEvents("GetBinaryState");
+
+    setBinaryEvents("SetBinaryState", "BinaryState", "on");
+    setBinaryEvents("SetBinaryState", "BinaryState", "off");
+
+    // soap = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
+    // soap += "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"";
+    // soap += "s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">";
+    // soap += "<s:Body>";
+    // soap += "<u:SetBinaryState xmlns:u=\"urn:Belkin:service:basicevent:1\">";
+    // soap += "<BinaryState>" + strcmp(state, "on") == 0 ? std::to_string(1) : std::to_string(0) + "</BinaryState></u:SetBinaryState>";
+    // soap += "</s:Body></s:Envelope>";
+
+    // std::string contentLength = "Content-Length: " + std::to_string(soap.length());
+
+    
     // headers = curl_slist_append(headers, "Content-type: text/xml; charset=utf-8");
     // headers = curl_slist_append(headers, "SOAPACTION: \"urn:Belkin:service:basicevent:1#SetBinaryState\"");
     // headers = curl_slist_append(headers, "Connection: keep-alive");
     // headers = curl_slist_append(headers, contentLength.c_str());
-    
-    std::cout << response.c_str() << std::endl;
-  
+      
     return 0;
 }
-
-// WiFiClient netSocket;               // network socket to device
-// const char wemo[] = "192.168.0.13"; // device address
-// int port = 49153;                   // port number
-// String route = "/upnp/control/basicevent1";  // API route
-// String soap;                        // string for the SOAP request
-// boolean wemoState = 1;              // whether the WeMo is on or off
-
-// void setup() {
-//   Serial.begin(9600);               // initialize serial communication
-//   // while you're not connected to a WiFi AP,
-//   while ( WiFi.status() != WL_CONNECTED) {
-//     Serial.print("Attempting to connect to Network named: ");
-//     Serial.println(SECRET_SSID);
-//     WiFi.begin(SECRET_SSID, SECRET_PASS);     // try to connect
-//     delay(2000);
-//   }
-
-//   // When you're connected, print out the device's network status:
-//   IPAddress ip = WiFi.localIP();
-//   Serial.print("IP Address: ");
-//   Serial.println(ip);
-//   // set up the SOAP request string. This formatting is just
-//   // for readability of the code:
-//   soap = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
-//   soap += "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"";
-//   soap += "s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">";
-//   soap += "<s:Body>";
-//   soap += "<u:SetBinaryState xmlns:u=\"urn:Belkin:service:basicevent:1\">";
-//   soap += "<BinaryState>1</BinaryState></u:SetBinaryState>";
-//   soap += "</s:Body></s:Envelope>";
-// }
-
-// void loop() {
-//   HttpClient http(netSocket, wemo, port); // make an HTTP client
-//   http.connectionKeepAlive();             // keep the connection alive
-//   http.beginRequest();                    // start assembling the request
-//   http.post(route);                       // set the route
-//   // add the headers:
-//   http.sendHeader("Content-type", "text/xml; charset=utf-8");
-//   String soapAction = "\"urn:Belkin:service:basicevent:1#SetBinaryState\"";
-//   http.sendHeader("SOAPACTION", soapAction);
-//   http.sendHeader("Connection: keep-alive");
-//   http.sendHeader("Content-Length", soap.length());
-//   http.endRequest();                      // end the request
-//   http.println(soap);                     // add the body
-//   Serial.println("request sent");
-
-//   while (http.connected()) {       // while connected to the server,
-//     if (http.available()) {        // if there is a response from the server,
-//       String result = http.readString();  // read it
-//       Serial.print(result);               // and print it
-//     }
-//   }
-//   Serial.println();             // end of the response
-//   if (wemoState == 1) {         // if the wemo's on
-//     soap.replace(">1<", ">0<"); // turn it off next time
-//   } else {                      // otherwise
-//     soap.replace(">0<", ">1<"); // turn it on next time
-//   }
-//   wemoState = !wemoState;       // toggle wemoState
-//   delay(5000);                  // wait 5 seconds
-// }

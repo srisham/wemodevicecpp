@@ -14,9 +14,9 @@ wemodevicecpp is licensed under the MIT license; see LICENSE in the source distr
 Before building, you'll need to install following dependencies
 
     cmake
-    libcurl4
     libcurl4-gnutls-dev
-
+    libcurl4-openssl-dev
+    libpugixml-dev
 
 ## Building
 wemodevicecpp should work with any Linux distribution and added cross compilation support.
