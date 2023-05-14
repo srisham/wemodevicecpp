@@ -1,32 +1,32 @@
 #include "HttpRequest.h"
 #include <curl/curl.h>
+#include <string.h>
+#include <stdlib.h>
 
-struct response {
-  char *memory;
-  size_t size;
+static std::string s_cResponse;
+
+struct memory {
+    char *response;
+    size_t size;
 };
 
-// static size_t
-// mem_cb(void *contents, size_t size, size_t nmemb, void *userp)
-// {
-//   size_t realsize = size * nmemb;
-//   struct response *mem = (struct response *)userp;
+static size_t cb(void *data, size_t size, size_t nmemb, void *clientp)
+{
+    size_t realsize = size * nmemb;
+    struct memory *mem = (struct memory *)clientp;
 
-//   char *ptr = (char *)realloc(mem->memory, mem->size + realsize + 1);
-//   if(!ptr) {
-//     /* out of memory! */
-//     printf("not enough memory (realloc returned NULL)\n");
-//     return 0;
-//   }
+    char *ptr = (char *)realloc(mem->response, mem->size + realsize + 1);
+    if(ptr == NULL)
+    return 0;  /* out of memory! */
 
-//   mem->memory = ptr;
-//   memcpy(&(mem->memory[mem->size]), contents, realsize);
-//   mem->size += realsize;
-//   mem->memory[mem->size] = 0;
+    mem->response = ptr;
+    memcpy(&(mem->response[mem->size]), data, realsize);
+    mem->size += realsize;
+    mem->response[mem->size] = 0;
 
-//   return realsize;
-// }
-
+    s_cResponse = mem->response;
+    return realsize;
+}
 
 HttpRequest::HttpRequest() {
     setHeaders("Content-type", "text/xml; charset=utf-8");
@@ -60,6 +60,7 @@ std::string HttpRequest::sendRequest() {
     CURL *curl;
     CURLcode res;
     std::string response;
+    struct memory chunk = {0};
     // std::string url = "http://wemo:49153/upnp/control/basicevent1";
 
     curl = curl_easy_init();
@@ -81,7 +82,13 @@ std::string HttpRequest::sendRequest() {
         if (!m_data.empty()) {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, m_data.c_str());
         }
+
+        /* send all data to this function  */
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
         
+        /* we pass our 'chunk' struct to the callback function */
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+
         res = curl_easy_perform(curl);
         /* Check for errors */
         if(res != CURLE_OK) {
@@ -105,6 +112,7 @@ std::string HttpRequest::sendRequest() {
         curl_easy_cleanup(curl);
     }
 
+    response = s_cResponse;
     return response;
 }
 
