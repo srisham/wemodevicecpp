@@ -1,32 +1,7 @@
-#include <curl/curl.h>
 #include <iostream>
 #include <cstring>
+#include "HttpRequest.h"
 
-struct response {
-  char *memory;
-  size_t size;
-};
-
-static size_t
-mem_cb(void *contents, size_t size, size_t nmemb, void *userp)
-{
-  size_t realsize = size * nmemb;
-  struct response *mem = (struct response *)userp;
-
-  char *ptr = (char *)realloc(mem->memory, mem->size + realsize + 1);
-  if(!ptr) {
-    /* out of memory! */
-    printf("not enough memory (realloc returned NULL)\n");
-    return 0;
-  }
-
-  mem->memory = ptr;
-  memcpy(&(mem->memory[mem->size]), contents, realsize);
-  mem->size += realsize;
-  mem->memory[mem->size] = 0;
-
-  return realsize;
-}
 
 int main(int argc, char** argv) {
 
@@ -49,46 +24,23 @@ int main(int argc, char** argv) {
 
     std::string contentLength = "Content-Length: " + std::to_string(soap.length());
 
-    CURL *curl;
-    CURLcode res;
-
     std::string url = "http://wemo:49153/upnp/control/basicevent1";
+    
+    HttpRequest http;
+    http.setUrl(url);
+    http.setHeaders("Content-type", "text/xml; charset=utf-8");
+    http.setHeaders("SOAPACTION", "\"urn:Belkin:service:basicevent:1#SetBinaryState\"");
+    http.setHeaders("Connection", "keep-alive");
+    http.setHeaders("Content-Length", soap);
 
-    curl = curl_easy_init();
-    if(curl) {
-        struct curl_slist* headers = NULL;
-        headers = curl_slist_append(headers, "Content-type: text/xml; charset=utf-8");
-        headers = curl_slist_append(headers, "SOAPACTION: \"urn:Belkin:service:basicevent:1#SetBinaryState\"");
-        headers = curl_slist_append(headers, "Connection: keep-alive");
-        headers = curl_slist_append(headers, contentLength.c_str());
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, soap.c_str());
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); /* redirects! */
-        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ""); /* no file */
-        res = curl_easy_perform(curl);
-        /* Check for errors */
-        if(res != CURLE_OK)
-        fprintf(stderr, "curl_easy_perform() failed: %s\n",
-                curl_easy_strerror(res));
-        else {
-        /*
-        * After the login POST, we have received the new cookies. Switch
-        * over to a GET and ask for the login-protected URL.
-        */
-        curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/file");
-        curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L); /* no more POST */
-        res = curl_easy_perform(curl);
-        /* Check for errors */
-        if(res != CURLE_OK)
-            fprintf(stderr, "second curl_easy_perform() failed: %s\n",
-                    curl_easy_strerror(res));
-        }
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-    }
+    std::string response = http.sendRequest();
 
-    std::cout<<std::endl;
+    // headers = curl_slist_append(headers, "Content-type: text/xml; charset=utf-8");
+    // headers = curl_slist_append(headers, "SOAPACTION: \"urn:Belkin:service:basicevent:1#SetBinaryState\"");
+    // headers = curl_slist_append(headers, "Connection: keep-alive");
+    // headers = curl_slist_append(headers, contentLength.c_str());
+    
+    std::cout << response.c_str() << std::endl;
   
     return 0;
 }

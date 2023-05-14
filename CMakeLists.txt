@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.0)
-project(wizlightcpp VERSION 1.0.0)
+project(wemodevicecpp VERSION 1.0.0)
 
 SET(GCC_COVERAGE_COMPILE_FLAGS "-Werror -Wall -std=c++17")
 SET(CMAKE_CXX_FLAGS  "${GCC_COVERAGE_COMPILE_FLAGS}")
@@ -7,20 +7,18 @@ SET(CMAKE_CXX_FLAGS  "${GCC_COVERAGE_COMPILE_FLAGS}")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake/thirdparty)
 
 add_executable(${PROJECT_NAME} 
-    ${CMAKE_SOURCE_DIR}/src/wizcontrol.cpp
-    ${CMAKE_SOURCE_DIR}/src/log.cpp
-    ${CMAKE_SOURCE_DIR}/src/udp.cpp
-    ${CMAKE_SOURCE_DIR}/src/bulb.cpp
+    ${CMAKE_SOURCE_DIR}/src/WemoControl.cpp
+    ${CMAKE_SOURCE_DIR}/src/HttpRequest.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-# Jansson JSON library
-find_package(Jansson REQUIRED) 
-target_link_libraries(${PROJECT_NAME} ${Jansson_LIBRARIES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${Jansson_INCLUDE_DIRS})
+# LibCURL  library
+find_package(CURL REQUIRED) 
+include_directories(${CURL_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} ${CURL_LIBRARIES})
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
