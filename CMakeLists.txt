@@ -20,6 +20,11 @@ find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} ${CURL_LIBRARIES})
 
+# LibCURL  library
+find_package(pugixml REQUIRED) 
+include_directories(${PUGIXML_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} pugixml)
+
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
