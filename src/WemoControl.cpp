@@ -4,7 +4,6 @@
 #include <pugixml.hpp>
 #include "HttpRequest.h"
 
-
 std::string createSoapRequest(const std::string& wMethod, const std::string& wServiceType, 
     const std::string& wName = "", const std::string& wState = "") {
 
@@ -31,9 +30,26 @@ std::string createSoapRequest(const std::string& wMethod, const std::string& wSe
 
     std::stringstream ss;
     doc.save(ss,"  ");
-    printf("Body: \n%s\n", ss.str().c_str());
+    //printf("Body: \n%s\n", ss.str().c_str());
 
     return ss.str();
+}
+
+std::string parseSoapResponse(const std::string& response, const std::string& node) {
+    std::string output;
+
+    std::string searchNode = "u:" + node;
+    pugi::xml_document doc;
+    printf("\n");   
+    if (doc.load_string(response.c_str()))
+    {
+        for(auto node : doc.child("s:Envelope").child("s:Body").child(searchNode.c_str()).children())
+        {
+            printf("name %s value %s\n", node.name(), node.text().as_string());
+        }
+    }
+    printf("\n");
+    return output;
 }
 
 std::string getBasicEvents(const std::string& wMethod) {
@@ -51,7 +67,7 @@ std::string getBasicEvents(const std::string& wMethod) {
     http.setData(soap);
 
     std::string response = http.sendRequest();
-    printf("%s\n", response.c_str());
+    //printf("%s\n", response.c_str());
     return response;
 }
 
@@ -73,7 +89,7 @@ std::string setBinaryEvents(const std::string& wMethod,
     http.setData(soap);
 
     std::string response = http.sendRequest();
-    printf("%s\n", response.c_str());
+    //printf("%s\n", response.c_str());
     return response;
 }
 
@@ -84,30 +100,15 @@ int main(int argc, char** argv) {
     char* state = argv[1];
     std::cout<<"Command: "<<state<<std::endl<<std::endl;
 
-    getBasicEvents("GetFriendlyName");
-    getBasicEvents("GetMacAddr");
-    getBasicEvents("GetHomeId");
-    getBasicEvents("GetServerEnvironment");
-    getBasicEvents("GetBinaryState");
-
-    setBinaryEvents("SetBinaryState", "BinaryState", "on");
-    setBinaryEvents("SetBinaryState", "BinaryState", "off");
-
-    // soap = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
-    // soap += "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"";
-    // soap += "s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">";
-    // soap += "<s:Body>";
-    // soap += "<u:SetBinaryState xmlns:u=\"urn:Belkin:service:basicevent:1\">";
-    // soap += "<BinaryState>" + strcmp(state, "on") == 0 ? std::to_string(1) : std::to_string(0) + "</BinaryState></u:SetBinaryState>";
-    // soap += "</s:Body></s:Envelope>";
-
-    // std::string contentLength = "Content-Length: " + std::to_string(soap.length());
-
     
-    // headers = curl_slist_append(headers, "Content-type: text/xml; charset=utf-8");
-    // headers = curl_slist_append(headers, "SOAPACTION: \"urn:Belkin:service:basicevent:1#SetBinaryState\"");
-    // headers = curl_slist_append(headers, "Connection: keep-alive");
-    // headers = curl_slist_append(headers, contentLength.c_str());
+    parseSoapResponse(getBasicEvents("GetFriendlyName"), "GetFriendlyNameResponse");
+    parseSoapResponse(getBasicEvents("GetMacAddr"), "GetMacAddrResponse");
+    parseSoapResponse(getBasicEvents("GetHomeId"), "GetHomeIdResponse");
+    parseSoapResponse(getBasicEvents("GetServerEnvironment"), "GetServerEnvironmentResponse");
+    parseSoapResponse(getBasicEvents("GetBinaryState"), "GetBinaryStateResponse");
+
+    setBinaryEvents("SetBinaryState", "BinaryState", "1");
+    setBinaryEvents("SetBinaryState", "BinaryState", "0");
       
     return 0;
 }

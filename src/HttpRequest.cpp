@@ -49,7 +49,7 @@ void HttpRequest::setHeaders(const std::string& key, const std::string& value) {
 }
 void HttpRequest::setData(const std::string& data) {
     m_data = data;
-    printf("%s\n", m_data.c_str());
+    // printf("%s\n", m_data.c_str());
 }
 
 // void HttpRequest::setMethod(const std::string& method) {
@@ -95,24 +95,12 @@ std::string HttpRequest::sendRequest() {
             fprintf(stderr, "curl_easy_perform() failed: %s\n",
                 curl_easy_strerror(res));
         }
-        // else {
-        // /*
-        // * After the login POST, we have received the new cookies. Switch
-        // * over to a GET and ask for the login-protected URL.
-        // */
-        // curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/file");
-        // curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L); /* no more POST */
-        // res = curl_easy_perform(curl);
-        // /* Check for errors */
-        // if(res != CURLE_OK)
-        //     fprintf(stderr, "second curl_easy_perform() failed: %s\n",
-        //             curl_easy_strerror(res));
-        // }
         /* always cleanup */
         curl_easy_cleanup(curl);
     }
 
     response = s_cResponse;
+    // printf("Response:\n %s\n\n", response.c_str());
     return response;
 }
 
