@@ -13,30 +13,14 @@
  * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
  * KIND, either express or implied.
  *
- * @file HttpRequest.h
+ * @file Soap.h
  * 
  ***************************************************************************/
 
 #pragma once
 #include <iostream>
-#include <vector>
 
-class HttpRequest {
+std::string createSoapRequest(const std::string& wMethod, const std::string& wServiceType, 
+    const std::string& wName = "", const std::string& wState = "");
 
-public:
-    HttpRequest();
-    ~HttpRequest();
-
-    void setUrl(const std::string& url);
-    void setHeaders(const std::string& key, const std::string& value);
-    void setData(const std::string& data);
-    // void setMethod(const std::string& method);
-    std::string sendRequest();
-
-private:
-    void clearRequest();
-    std::vector<std::string> m_headerList;
-    std::string m_url;
-    std::string m_data;
-    // std::string m_method;
-};
+std::string parseSoapResponse(const std::string& response, const std::string& node);

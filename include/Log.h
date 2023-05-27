@@ -13,30 +13,31 @@
  * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
  * KIND, either express or implied.
  *
- * @file HttpRequest.h
+ * @file Log.h
  * 
  ***************************************************************************/
 
-#pragma once
+#ifndef __LOGGER_H__
+#define __LOGGER_H__
+
 #include <iostream>
-#include <vector>
+#include <map>
+using namespace std;
 
-class HttpRequest {
+#define LOG_F(...)              L::log(L::f, ##__VA_ARGS__)
+#define LOG_E(...)              L::log(L::e, ##__VA_ARGS__)
+#define LOG_W(...)              L::log(L::w, ##__VA_ARGS__)
+#define LOG_I(...)              L::log(L::i, ##__VA_ARGS__)
+#define LOG_D(...)              L::log(L::d, ##__VA_ARGS__)
 
-public:
-    HttpRequest();
-    ~HttpRequest();
+namespace L {
 
-    void setUrl(const std::string& url);
-    void setHeaders(const std::string& key, const std::string& value);
-    void setData(const std::string& data);
-    // void setMethod(const std::string& method);
-    std::string sendRequest();
+    enum LEVEL { f, e, w, i, d };
 
-private:
-    void clearRequest();
-    std::vector<std::string> m_headerList;
-    std::string m_url;
-    std::string m_data;
-    // std::string m_method;
-};
+    void setLogLevel(LEVEL level);
+    void log(LEVEL level, const char *format, ...);
+    std::string getLogDetails(LEVEL level);
+    std::string getTimestamp();
+
+}
+#endif

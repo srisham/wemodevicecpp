@@ -9,6 +9,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake/thirdparty)
 add_executable(${PROJECT_NAME} 
     ${CMAKE_SOURCE_DIR}/src/WemoControl.cpp
     ${CMAKE_SOURCE_DIR}/src/HttpRequest.cpp
+    ${CMAKE_SOURCE_DIR}/src/Soap.cpp
+    ${CMAKE_SOURCE_DIR}/src/Log.cpp
+    ${CMAKE_SOURCE_DIR}/src/Plug.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

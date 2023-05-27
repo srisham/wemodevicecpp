@@ -1,114 +1,267 @@
-#include <iostream>
-#include <cstring>
+/***************************************************************************
+ *  Project                WEMODEVICECPP     
+ *
+ * Copyright (C) 2023 , Sri Balaji S.
+ *
+ * This software is licensed as described in the file LICENSE, which
+ * you should have received as part of this distribution.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the LICENSE file.
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ * @file WemoControl.cpp
+ * 
+ ***************************************************************************/
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <sstream>
-#include <pugixml.hpp>
-#include "HttpRequest.h"
+#include <string>
+#include <algorithm>
+#include <cctype>
+#include <clocale>
 
-std::string createSoapRequest(const std::string& wMethod, const std::string& wServiceType, 
-    const std::string& wName = "", const std::string& wState = "") {
+#include "Log.h"
+#include "WemoControl.h"
+using namespace std;
 
-    // Generate new XML document within memory
-    pugi::xml_document doc;
 
-    auto declarationNode = doc.append_child(pugi::node_declaration);
-    declarationNode.append_attribute("version")     = "1.0";
-    declarationNode.append_attribute("encoding")    = "utf-8";
+void printUsage()
+{
+    std::cout << "\n"
+                "Usage: wemocontrol {Options} [Commands] {Args}\n"
+                "Options:\n"
+                "  --help\t\t\tShow the usage menu of this app\n"
+                "  --verbose\t\t\tEnable verbose logs\n"
+                << std::endl;
 
-    auto root = doc.append_child("s:Envelope");
-    root.append_attribute("xmlns:s")     = "http://schemas.xmlsoap.org/soap/envelope/";
-    root.append_attribute("s:encodingStyle") = "http://schemas.xmlsoap.org/soap/encoding/";
-
-    auto body = root.append_child("s:Body");
-    auto setBinarystate = body.append_child((std::string("u:") + wMethod).c_str());
-    setBinarystate.append_attribute("xmlns:u") = wServiceType.c_str(); //"urn:Belkin:service:basicevent:1";
-        
-    pugi::xml_node state;
-    if (!wName.empty()) {
-        state = setBinarystate.append_child(wName.c_str());
-        state.append_child(pugi::node_pcdata).set_value(wState.c_str());
-    }
-
-    std::stringstream ss;
-    doc.save(ss,"  ");
-    //printf("Body: \n%s\n", ss.str().c_str());
-
-    return ss.str();
+    std::cout << "Commands:\n"
+                "  off\t\t\t\tTurn Off Wemo device\n"
+                "  on\t\t\t\tTurn On Wemo device\n"
+                "  status\t\t\tGet the current status of Wemo device\n"
+                "  getdeviceinfo\t\t\tGet the device information\n"
+                << std::endl;
 }
 
-std::string parseSoapResponse(const std::string& response, const std::string& node) {
-    std::string output;
+bool WemoControl::checkArgOptions(const std::vector<std::string>& args, const std::string& cmd, 
+        const std::string& option, int& param)
+{
+    std::string strParam;
+    auto ret = checkArgOptions(args, cmd, option, strParam);
+    try {
+        param = std::stoi(strParam);
+    }
+    catch (exception& e) {
+        LOG_D("Exception @ %s", e.what());
+    }
+    return ret;
+}
 
-    std::string searchNode = "u:" + node;
-    pugi::xml_document doc;
-    printf("\n");   
-    if (doc.load_string(response.c_str()))
-    {
-        for(auto node : doc.child("s:Envelope").child("s:Body").child(searchNode.c_str()).children())
-        {
-            printf("name %s value %s\n", node.name(), node.text().as_string());
+bool WemoControl::checkArgOptions(const std::vector<std::string>& args, const std::string& cmd, 
+    const std::string& option,  std::string& param)
+{
+    auto it = std::find(args.begin(), args.end(), option);
+    if (it != args.end()) {
+        if (std::next(it) != args.end()) {
+            param = *(std::next(it));
+            return true;
+        }
+        else {
+            std::cerr << "Error: Missing required parameter for " << option << " option\n";
+            return false;
         }
     }
-    printf("\n");
-    return output;
+    else {
+        std::cerr << "Unknown Option \n\n"
+            "Usage: wemodeviceapp " << cmd << " {OPTIONS}\n"
+            "Try 'wemodeviceapp " << cmd << " --help' for help."
+            << std::endl;
+        return false;
+    }
+    return true;
 }
 
-std::string getBasicEvents(const std::string& wMethod) {
+bool WemoControl::validateArgsUsage(const std::vector<std::string>& args) 
+{
+    if (args.empty() ||  g_cmdMap.find(args.at(0)) == g_cmdMap.end()) {
+        printUsage();
+        return false;
+    }
+
+    bool showArgUsage = false;
+    std::string ipAddr, ret, cmd = args.at(0);
+    std::vector<std::string> argUsageList;
+    auto eCmd = g_cmdMap.at(cmd);
+
+    if (args.at(1) == "--help") {
+        showArgUsage = true;
+        argUsageList.emplace_back("--ip\t\t\tIP address of the plug.\n");
+        argUsageList.emplace_back("--help\t\t\tShow this message and exit.\n");
+    }
+    else {
+        if (!checkArgOptions(args, cmd, "--ip", ipAddr))
+            return false;
+        m_plug.setDeviceIP(ipAddr);
+    }
     
-    std::string wServiceType = "urn:Belkin:service:basicevent:1";
-    std::string soap = createSoapRequest(wMethod, wServiceType);
-    std::string url = "http://wemo:49153/upnp/control/basicevent1";    
+    switch (eCmd)
+    {		
+	case on:
+	case off:
+	case status:
+    case getdeviceinfo:
+        if (!showArgUsage)
+            performWemoRequest(cmd);
+    break;
+	// case setbrightness:
+    //     if (showArgUsage)
+    //         argUsageList.emplace_back("--dim\t\t\tBrightness level in percent [0 to 100].\n");
+    //     else {
+    //         int dimlevel;
+    //         if (checkArgOptions(args, cmd, "--dim", dimlevel))
+    //             ret = m_plug.setBrightness(dimlevel);
+    //     }
+    // break;
 
-    HttpRequest http;
-    http.setUrl(url);
+	default:
+        printUsage();
+	    return false;
+    }
 
-    http.setHeaders("SOAPACTION", "\"" + wServiceType + "#" + wMethod + "\"");
-    http.setHeaders("Content-Length", std::to_string(soap.length()));
-
-    http.setData(soap);
-
-    std::string response = http.sendRequest();
-    //printf("%s\n", response.c_str());
-    return response;
+    if (showArgUsage) {
+        std::cout << "Usage: wemodeviceapp "<< cmd << " {OPTIONS}\n\n"
+                "Options:" << std::endl;
+        for (auto& it : argUsageList)
+            std::cout << it;
+        return false;
+    }
+    else if (!ret.empty())
+        cout << ret << endl;
+    return true;
 }
 
-
-std::string setBinaryEvents(const std::string& wMethod, 
-    const std::string& wName, const std::string& wState) {
-    
-    std::string wServiceType = "urn:Belkin:service:basicevent:1";
-    std::string soap = createSoapRequest(wMethod, wServiceType, wName, wState);
-
-    std::string url = "http://wemo:49153/upnp/control/basicevent1";    
-    HttpRequest http;
-    http.setUrl(url);
-
-    http.setHeaders("SOAPACTION", "\"" + wServiceType + "#" + wMethod + "\"");
-    // http.setHeaders("SOAPACTION", "\"urn:Belkin:service:basicevent:1#SetBinaryState\"");
-    http.setHeaders("Content-Length", std::to_string(soap.length()));
-
-    http.setData(soap);
-
-    std::string response = http.sendRequest();
-    //printf("%s\n", response.c_str());
-    return response;
+WemoControl& WemoControl::getInstance() {
+    static WemoControl instance;
+    return instance;
 }
 
-int main(int argc, char** argv) {
+WemoControl::WemoControl() 
+{
+    g_cmdMap = {
+        {"on", on},
+        {"off", off},
+        {"status", status},
+        {"getdeviceinfo", getdeviceinfo}
+    };
+}
 
-    printf("main +\n");
-    
-    char* state = argv[1];
-    std::cout<<"Command: "<<state<<std::endl<<std::endl;
+WemoControl::~WemoControl() {
+}
 
-    
-    parseSoapResponse(getBasicEvents("GetFriendlyName"), "GetFriendlyNameResponse");
-    parseSoapResponse(getBasicEvents("GetMacAddr"), "GetMacAddrResponse");
-    parseSoapResponse(getBasicEvents("GetHomeId"), "GetHomeIdResponse");
-    parseSoapResponse(getBasicEvents("GetServerEnvironment"), "GetServerEnvironmentResponse");
-    parseSoapResponse(getBasicEvents("GetBinaryState"), "GetBinaryStateResponse");
+bool WemoControl::isCmdSupported(const std::string& cmd) {
+    auto it = g_cmdMap.find(cmd);
 
-    setBinaryEvents("SetBinaryState", "BinaryState", "1");
-    setBinaryEvents("SetBinaryState", "BinaryState", "0");
-      
-    return 0;
+    if (it != g_cmdMap.end())
+        return true;
+    else
+        return false;
+}
+
+std::string WemoControl::performWemoRequest(const std::string& cmd)
+{
+    std::string ret;
+    if (g_cmdMap.find(cmd) == g_cmdMap.end()) {
+        printUsage();
+        return ret;
+    }
+    auto eCmd = g_cmdMap.at(cmd);
+
+    if (m_plug.getDeviceIp().empty()) {
+        std::string ip;
+        while (1) {
+            cout << "Enter the plug IP address: ";
+            getline(cin, ip);
+            if (ip.empty())
+                continue;
+            else
+                break;
+        }
+        m_plug.setDeviceIP(ip);
+    }
+
+    switch (eCmd) {
+        case on:
+            ret = m_plug.setState("1");
+        break;
+
+        case off:
+            ret = m_plug.setState("0");
+        break;
+
+        case status:
+            ret = m_plug.getState();
+        break;
+
+        case getdeviceinfo:
+            ret = m_plug.getDeviceInfo();
+        break;
+
+	    // case setbrightness:
+        //     ushort level;
+        //     cout << "Enter the brightness level [0 to 100]:";
+        //     cin >> level;
+        //     ret = m_plug.setBrightness(level);
+        // break;
+
+        default:
+        break;
+    }
+    if (!ret.empty())
+        cout << ret << endl;
+
+    return ret; 
+}
+
+int main(int argc, char *argv[])
+{
+    WemoControl& wemo = WemoControl::getInstance();
+    if (argc == 1) {
+        printUsage();
+        return 0;
+    }
+
+    std::vector<std::string> args;
+    for (int i = 1; i < argc; i++) {
+        args.emplace_back(argv[i]);
+    }
+
+    auto hIt = std::find(args.begin(), args.end(), "--help");
+    if ((hIt != args.end()) && (hIt == args.begin())) {
+        printUsage();
+        return 0;
+    }
+
+    auto vIt = std::find(args.begin(), args.end(), "--verbose");
+    if (vIt != args.end()) {
+        L::setLogLevel(L::d);
+        LOG_D("Verbose log enabled");
+        args.erase(vIt);
+    }
+
+    if (!wemo.isCmdSupported(args.at(0))) {
+        printUsage();
+        return 0;
+    }
+
+    if (args.size() == 1)
+        wemo.performWemoRequest(args.at(0));
+    else
+        wemo.validateArgsUsage(args);
 }
