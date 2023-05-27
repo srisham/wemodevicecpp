@@ -22,9 +22,8 @@ On Debian-based Linux distributions such as Ubuntu, these dependencies can be sa
 wemodevicecpp should work with any Linux distribution and added cross compilation support.
 
     Tested on:
-        X86_64
+        x86_64
         Arm
-        macOS
         
 ### Checking out the wemodevicecpp
 To check out the wemodevicecpp repository:
@@ -47,6 +46,28 @@ To cross-compile, run the following commands:
     cd build_arm
     cmake  -DCMAKE_TOOLCHAIN_FILE=<path_to_toolchain_cmake_file>/arm_toolchain.cmake ..
     make
+    
+## Usage
+wemodevicecpp supports both interactive and cli methods. 
+    
+If only 'command' passed as input parameter, it will enable the app in interactive mode. User can enter the command specific inputs to customize the bulb.
+
+    $ wemodevicecpp on
+    
+In cli mode, user can all pass necessary 'options' as arguments in one go. 
+
+    $ wemodevicecpp getdeviceinfo --ip 192.168.20.105
+
+To know the list of 'options' required for each command, run the 'help' option in the following way:
+
+    $ wemodevicecpp off --help
+
+## Supported Features
+Following features are supported now:
+
+    On/Off device
+    Get Status
+    Get Device Info
 
 ## Future Improvements
     Windows Support
