@@ -13,30 +13,37 @@
  * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
  * KIND, either express or implied.
  *
- * @file HttpRequest.h
+ * @file WemoControl.h
  * 
  ***************************************************************************/
 
-#pragma once
 #include <iostream>
+#include <map>
 #include <vector>
+#include "Plug.h"
 
-class HttpRequest {
 
+class WemoControl
+{
 public:
-    HttpRequest();
-    ~HttpRequest();
+    static WemoControl& getInstance();
+    bool isCmdSupported(const std::string& cmd);
+    bool validateArgsUsage(const std::vector<std::string>& args);
+    std::string performWemoRequest(const std::string& cmd);
 
-    void setUrl(const std::string& url);
-    void setHeaders(const std::string& key, const std::string& value);
-    void setData(const std::string& data);
-    // void setMethod(const std::string& method);
-    std::string sendRequest();
 
 private:
-    void clearRequest();
-    std::vector<std::string> m_headerList;
-    std::string m_url;
-    std::string m_data;
-    // std::string m_method;
+    bool checkArgOptions(const std::vector<std::string>& args, const std::string& cmd, 
+        const std::string& option, std::string& param);
+    bool checkArgOptions(const std::vector<std::string>& args, const std::string& cmd, 
+        const std::string& option, int& param);
+
+    WemoControl();
+    ~WemoControl();
+
+    enum WEMOCMD {
+        on, off, status,getdeviceinfo
+    };
+    Plug m_plug;
+    std::map<std::string, WEMOCMD> g_cmdMap;
 };

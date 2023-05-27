@@ -13,30 +13,30 @@
  * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
  * KIND, either express or implied.
  *
- * @file HttpRequest.h
+ * @file Plug.cpp
  * 
  ***************************************************************************/
 
-#pragma once
 #include <iostream>
-#include <vector>
 
-class HttpRequest {
+class Plug {
 
 public:
-    HttpRequest();
-    ~HttpRequest();
+    Plug();
+    ~Plug();
 
-    void setUrl(const std::string& url);
-    void setHeaders(const std::string& key, const std::string& value);
-    void setData(const std::string& data);
-    // void setMethod(const std::string& method);
-    std::string sendRequest();
+    void setDeviceIP(const std::string& ip);
+    std::string getDeviceIp();
+
+    std::string getState();
+    std::string setState(const std::string& state);
+    std::string getDeviceInfo();
 
 private:
-    void clearRequest();
-    std::vector<std::string> m_headerList;
-    std::string m_url;
-    std::string m_data;
-    // std::string m_method;
+    std::string getBasicEvents(const std::string& wMethod);
+    std::string setBinaryEvents(const std::string& wMethod, 
+        const std::string& wName, const std::string& wState);
+
+    std::string m_devIP;
 };
+
