@@ -1,3 +1,22 @@
+/***************************************************************************
+ *  Project                WEMODEVICECPP     
+ *
+ * Copyright (C) 2023 , Sri Balaji S.
+ *
+ * This software is licensed as described in the file LICENSE, which
+ * you should have received as part of this distribution.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the LICENSE file.
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ * @file HttpRequest.cpp
+ * 
+ ***************************************************************************/
+
 #include "HttpRequest.h"
 #include <curl/curl.h>
 #include <string.h>
@@ -39,17 +58,17 @@ HttpRequest::~HttpRequest() {
 
 void HttpRequest::setUrl(const std::string& url) {
     m_url = url;
-    printf("URL %s\n", m_url.c_str());
+    // printf("URL %s\n", m_url.c_str());
 }
 
 void HttpRequest::setHeaders(const std::string& key, const std::string& value) {
     std::string header = key + ": " + value;
     m_headerList.emplace_back(header);
-    printf("%s\n", header.c_str());
+    // printf("%s\n", header.c_str());
 }
 void HttpRequest::setData(const std::string& data) {
     m_data = data;
-    printf("%s\n", m_data.c_str());
+    // printf("%s\n", m_data.c_str());
 }
 
 // void HttpRequest::setMethod(const std::string& method) {
@@ -95,20 +114,6 @@ std::string HttpRequest::sendRequest() {
             fprintf(stderr, "curl_easy_perform() failed: %s\n",
                 curl_easy_strerror(res));
         }
-        // else {
-        // /*
-        // * After the login POST, we have received the new cookies. Switch
-        // * over to a GET and ask for the login-protected URL.
-        // */
-        // curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/file");
-        // curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L); /* no more POST */
-        // res = curl_easy_perform(curl);
-        // /* Check for errors */
-        // if(res != CURLE_OK)
-        //     fprintf(stderr, "second curl_easy_perform() failed: %s\n",
-        //             curl_easy_strerror(res));
-        // }
-        /* always cleanup */
         curl_easy_cleanup(curl);
     }
 
